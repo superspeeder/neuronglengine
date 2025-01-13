@@ -61,7 +61,7 @@ namespace neuron {
 
         template <typename T, std::size_t N>
         static std::shared_ptr<Buffer> create(const std::array<T, N> &data, Usage usage = Usage::StaticDraw) {
-            static consteval std::size_t bufsize = N * sizeof(T);
+            static constexpr std::size_t bufsize = N * sizeof(T);
             return std::make_shared<Buffer>(bufsize, data.data(), usage);
         }
 
@@ -79,7 +79,7 @@ namespace neuron {
 
         template <typename T, std::size_t N>
         void set(const std::array<T, N> &data) {
-            static consteval std::size_t bufsize = N * sizeof(T);
+            static constexpr std::size_t bufsize = N * sizeof(T);
             set(bufsize, data.data());
         }
 
@@ -90,7 +90,7 @@ namespace neuron {
 
         template <typename T, std::size_t N>
         void set(const std::array<T, N> &data, const Usage usage) {
-            static consteval std::size_t bufsize = N * sizeof(T);
+            static constexpr std::size_t bufsize = N * sizeof(T);
             set(bufsize, data.data(), usage);
         }
 
@@ -166,133 +166,8 @@ namespace neuron {
         bool separable = false;
     };
 
-    namespace detail {
-        template <deref_into<ShaderModule> T, deref_into<ShaderModule>... Ts>
-        constexpr void constexpr_for_smattc_(unsigned int program, T sm, std::tuple<Ts...> vals) {
-            glAttachShader(program, (*sm).handle());
-            if constexpr (std::tuple_size_v<decltype(vals)> == 1) {
-                glAttachShader(program, (*std::get<0>(vals)).handle());
-            } else if constexpr (std::tuple_size_v<decltype(vals)> > 1) {
-                static constexpr std::index_sequence iseq = std::make_index_sequence<std::tuple_size_v<decltype(vals)> - 1>();
-
-                constexpr_for_smattc_(program, std::get<0>(vals), std::make_tuple(std::get<1 + iseq>(vals)...));
-            }
-        }
-
-        template <deref_into<ShaderModule>... Ts>
-        constexpr void constexpr_for_smattc(unsigned int program, std::tuple<Ts...> vals) {
-            if constexpr (std::tuple_size_v<decltype(vals)> == 1) {
-                constexpr_for_smattc_(program, std::get<0>(vals), std::make_tuple());
-            } else if constexpr (std::tuple_size_v<decltype(vals)> == 2) {
-                constexpr_for_smattc_(program, std::get<0>(vals), std::make_tuple(std::get<1>(vals)));
-            } else if constexpr (std::tuple_size_v<decltype(vals)> > 2) {
-                constexpr_for_smattc_(program, std::get<0>(vals), std::make_tuple(std::get<1 + std::make_index_sequence<std::tuple_size_v<decltype(vals)> - 1>()>(vals)...));
-            }
-        }
-    } // namespace detail
-
     class Shader {
       public:
-        template <deref_into<ShaderModule>... Ts>
-        explicit inline Shader(Ts... shaders) {
-            using tuple_t = std::tuple<Ts...>;
-            static_assert(std::tuple_size_v<tuple_t> > 0, "Must pass at least one shader to Shader::Shader");
-            tuple_t tup = std::forward_as_tuple(shaders...);
-
-            m_Program = glCreateProgram();
-
-            detail::constexpr_for_smattc(m_Program, tup);
-
-            glLinkProgram(m_Program);
-
-            int status;
-            glGetProgramiv(m_Program, GL_LINK_STATUS, &status);
-            if (status != GL_TRUE) {
-                glGetProgramiv(m_Program, GL_INFO_LOG_LENGTH, &status);
-
-                std::string info_log;
-                info_log.resize(status);
-                glGetProgramInfoLog(m_Program, status, &status, info_log.data());
-                throw std::runtime_error("Failed to link shader program: " + info_log);
-            }
-        }
-
-        template <deref_into<ShaderModule>... Ts>
-        inline explicit Shader(const std::tuple<Ts...> shaders) {
-            using tuple_t = std::tuple<Ts...>;
-            static_assert(std::tuple_size_v<tuple_t> > 0, "Must pass at least one shader to Shader::Shader");
-
-            m_Program = glCreateProgram();
-
-            detail::constexpr_for_smattc(m_Program, shaders);
-
-
-            glLinkProgram(m_Program);
-
-            int status;
-            glGetProgramiv(m_Program, GL_LINK_STATUS, &status);
-            if (status != GL_TRUE) {
-                glGetProgramiv(m_Program, GL_INFO_LOG_LENGTH, &status);
-
-                std::string info_log;
-                info_log.resize(status);
-                glGetProgramInfoLog(m_Program, status, &status, info_log.data());
-                throw std::runtime_error("Failed to link shader program: " + info_log);
-            }
-        }
-
-        template <deref_into<ShaderModule>... Ts>
-        explicit inline Shader(const ProgramParameters &parameters, Ts... shaders) {
-            using tuple_t = std::tuple<Ts...>;
-            static_assert(std::tuple_size_v<tuple_t> > 0, "Must pass at least one shader to Shader::Shader");
-            tuple_t tup = std::forward_as_tuple(shaders...);
-
-            m_Program = glCreateProgram();
-
-            detail::constexpr_for_smattc(m_Program, tup);
-
-            glProgramParameteri(m_Program, GL_PROGRAM_SEPARABLE, parameters.separable);
-
-            glLinkProgram(m_Program);
-
-            int status;
-            glGetProgramiv(m_Program, GL_LINK_STATUS, &status);
-            if (status != GL_TRUE) {
-                glGetProgramiv(m_Program, GL_INFO_LOG_LENGTH, &status);
-
-                std::string info_log;
-                info_log.resize(status);
-                glGetProgramInfoLog(m_Program, status, &status, info_log.data());
-                throw std::runtime_error("Failed to link shader program: " + info_log);
-            }
-        }
-
-        template <deref_into<ShaderModule>... Ts>
-        inline Shader(const ProgramParameters &parameters, const std::tuple<Ts...> shaders) {
-            using tuple_t = std::tuple<Ts...>;
-            static_assert(std::tuple_size_v<tuple_t> > 0, "Must pass at least one shader to Shader::Shader");
-
-            m_Program = glCreateProgram();
-
-            detail::constexpr_for_smattc(m_Program, shaders);
-
-
-            glProgramParameteri(m_Program, GL_PROGRAM_SEPARABLE, parameters.separable);
-
-            glLinkProgram(m_Program);
-
-            int status;
-            glGetProgramiv(m_Program, GL_LINK_STATUS, &status);
-            if (status != GL_TRUE) {
-                glGetProgramiv(m_Program, GL_INFO_LOG_LENGTH, &status);
-
-                std::string info_log;
-                info_log.resize(status);
-                glGetProgramInfoLog(m_Program, status, &status, info_log.data());
-                throw std::runtime_error("Failed to link shader program: " + info_log);
-            }
-        }
-
         template <deref_into<ShaderModule> Ts>
         inline explicit Shader(const std::vector<Ts> shaders) {
             if (shaders.empty()) {

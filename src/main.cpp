@@ -47,7 +47,7 @@ int main() {
     {
         const auto vsh = neuron::ShaderModule::load("res/vert.glsl", neuron::ShaderModule::Type::Vertex);
         const auto fsh = neuron::ShaderModule::load("res/frag.glsl", neuron::ShaderModule::Type::Fragment);
-        shader = std::make_shared<neuron::Shader>(vsh, fsh);
+        shader = std::make_shared<neuron::Shader>(std::vector{vsh, fsh});
     }
 
 
@@ -179,15 +179,24 @@ int main() {
             if (ImGui::Button("Reload Shaders")) {
                 const auto vsh = neuron::ShaderModule::load("res/vert.glsl", neuron::ShaderModule::Type::Vertex);
                 const auto fsh = neuron::ShaderModule::load("res/frag.glsl", neuron::ShaderModule::Type::Fragment);
-                shader = std::make_shared<neuron::Shader>(vsh, fsh);
+                shader = std::make_shared<neuron::Shader>(std::vector{vsh, fsh});
             }
 
             ImGui::Spacing();
             ImGui::InputText("Model Filename", modelPath, 260);
 
             if (ImGui::Button("Reload Model")) {
-                meshes = neuron::Mesh::loadWithAssimp(modelPath);
-                mesh = meshes[0];
+                std::string mp = modelPath;
+
+                if (std::filesystem::exists(mp)) {
+                    if (mp.ends_with(".nmesh")) {
+                        meshes.clear();
+                        mesh = neuron::Mesh::loadFromNMeshFile(modelPath);
+                    } else {
+                        meshes = neuron::Mesh::loadWithAssimp(modelPath);
+                        mesh = meshes[0];
+                    }
+                }
             }
         }
         ImGui::End();

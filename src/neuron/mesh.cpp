@@ -1,6 +1,7 @@
 #include "neuron/mesh.hpp"
 
 #include <fstream>
+#include <iostream>
 
 #include <assimp/Importer.hpp>
 #include <assimp/postprocess.h>
@@ -32,18 +33,18 @@ namespace neuron {
                 sect     = sect.substr(off + 2);
                 switch (const auto id = static_cast<NMeshSVEl>(cid)) {
                 case NMeshSVEl::Vertex:
-                    sscanf_s(sect.c_str(), "%f %f %f", &vert.position.x, &vert.position.y, &vert.position.z);
+                    sscanf(sect.c_str(), "%f %f %f", &vert.position.x, &vert.position.y, &vert.position.z);
                     vert.position.w = 1.0;
                     break;
                 case NMeshSVEl::Color:
-                    sscanf_s(sect.c_str(), "%f %f %f %f", &vert.color.r, &vert.color.g, &vert.color.b, &vert.color.a);
+                    sscanf(sect.c_str(), "%f %f %f %f", &vert.color.r, &vert.color.g, &vert.color.b, &vert.color.a);
                     break;
                 case NMeshSVEl::Normal:
-                    sscanf_s(sect.c_str(), "%f %f %f", &vert.normal.x, &vert.normal.y, &vert.normal.z);
+                    sscanf(sect.c_str(), "%f %f %f", &vert.normal.x, &vert.normal.y, &vert.normal.z);
                     vert.normal.w = 0.0;
                     break;
                 case NMeshSVEl::TexCoord:
-                    sscanf_s(sect.c_str(), "%f %f", &vert.texCoord.x, &vert.texCoord.y);
+                    sscanf(sect.c_str(), "%f %f", &vert.texCoord.x, &vert.texCoord.y);
                     break;
                 default:
                     throw std::invalid_argument("Malformed nmesh vertex line: '" + std::to_string(cid) + "' is not a valid vertex component id");
@@ -165,7 +166,8 @@ namespace neuron {
                     }
 
 
-                    if (draw_indices > 0) { // draws only get reset on new lines (manual primitive restart doesn't form a new draw)
+                    if (draw_indices > 0) {
+                        // draws only get reset on new lines (manual primitive restart doesn't form a new draw)
                         data.draws.push_back(std::make_pair(draw_start, draw_indices));
                     }
                     draw_start   = data.indices.size();
@@ -209,37 +211,37 @@ namespace neuron {
             VertexLayout{
                 .bindings = {{
                     .binding = 0,
-                    .stride  = sizeof(StandardVertex),
-                    .buffer  = m_VertexBuffer,
-                    .offset  = 0,
+                    .stride = sizeof(StandardVertex),
+                    .buffer = m_VertexBuffer,
+                    .offset = 0,
                 }},
                 .attributes =
+                {
                     {
-                        {
-                            .location = 0,
-                            .binding  = 0,
-                            .offset   = offsetof(StandardVertex, position),
-                            .size     = 4,
-                        },
-                        {
-                            .location = 1,
-                            .binding  = 0,
-                            .offset   = offsetof(StandardVertex, color),
-                            .size     = 4,
-                        },
-                        {
-                            .location = 2,
-                            .binding  = 0,
-                            .offset   = offsetof(StandardVertex, normal),
-                            .size     = 4,
-                        },
-                        {
-                            .location = 3,
-                            .binding  = 0,
-                            .offset   = offsetof(StandardVertex, texCoord),
-                            .size     = 2,
-                        },
+                        .location = 0,
+                        .binding = 0,
+                        .offset = offsetof(StandardVertex, position),
+                        .size = 4,
                     },
+                    {
+                        .location = 1,
+                        .binding = 0,
+                        .offset = offsetof(StandardVertex, color),
+                        .size = 4,
+                    },
+                    {
+                        .location = 2,
+                        .binding = 0,
+                        .offset = offsetof(StandardVertex, normal),
+                        .size = 4,
+                    },
+                    {
+                        .location = 3,
+                        .binding = 0,
+                        .offset = offsetof(StandardVertex, texCoord),
+                        .size = 2,
+                    },
+                },
             },
             m_ElementBuffer);
     }
@@ -250,7 +252,7 @@ namespace neuron {
 
     std::vector<std::shared_ptr<Mesh>> Mesh::loadWithAssimp(const std::filesystem::path &path) {
         Assimp::Importer importer;
-        const aiScene   *scene = importer.ReadFile(path.string(), aiProcess_CalcTangentSpace | aiProcess_Triangulate | aiProcess_JoinIdenticalVertices | aiProcess_SortByPType);
+        const aiScene *  scene = importer.ReadFile(path.string(), aiProcess_CalcTangentSpace | aiProcess_Triangulate | aiProcess_JoinIdenticalVertices | aiProcess_SortByPType);
 
         if (scene == nullptr) {
             throw std::runtime_error("Failed to load model");
@@ -259,8 +261,10 @@ namespace neuron {
         std::vector<std::shared_ptr<Mesh>> meshes;
 
         for (std::size_t i = 0; i < scene->mNumMeshes; i++) {
-            aiMesh    *mesh = scene->mMeshes[i];
+            aiMesh *   mesh = scene->mMeshes[i];
             Mesh::Data meshData{};
+
+            std::cout << "Num Vertices: " << mesh->mNumVertices << std::endl;
 
             for (std::size_t j = 0; j < mesh->mNumVertices; j++) {
                 StandardVertex vert{};
@@ -304,14 +308,17 @@ namespace neuron {
                 throw std::runtime_error("Unsupported primitive type");
             }
 
+            std::cout << "Num Faces: " << mesh->mNumFaces << std::endl;
+
             for (std::size_t j = 0; j < mesh->mNumFaces; j++) {
                 aiFace face = mesh->mFaces[j];
-
-                std::span span(face.mIndices, face.mNumIndices);
-                meshData.indices.append_range(span);
+                meshData.indices.reserve(meshData.indices.size() + face.mNumIndices);
+                for (std::size_t k = 0; k < face.mNumIndices; k++) {
+                    meshData.indices.push_back(face.mIndices[k]);
+                }
             }
 
-            meshData.mode = Mode::ElementArray;
+            meshData.mode        = Mode::ElementArray;
             meshData.primrestart = false;
 
             meshes.push_back(std::make_shared<Mesh>(meshData));

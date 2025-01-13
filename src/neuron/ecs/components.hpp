@@ -25,6 +25,4 @@ namespace neuron::ecs {
     };
 
     struct Visible {};
-
-
 }
