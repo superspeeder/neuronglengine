@@ -1,5 +1,10 @@
 #pragma once
 
+#include "neuron/asset/asset.hpp"
+#include "neuron/asset/post_processing_pipeline.hpp"
+#include "neuron/asset/render_target.hpp"
+
+
 #include <flecs/addons/cpp/flecs.hpp>
 #include <glm/glm.hpp>
 #include <glm/gtc/quaternion.hpp>
@@ -28,7 +33,7 @@ namespace neuron::ecs {
 
     struct Visibility {
         bool visible;
-        bool only_self = false;
+        bool onlySelf;
     };
 
     // the system will update this on everything which has any parent node along its path to the root of its part of the tree which contains a `Visibility` component
@@ -42,14 +47,33 @@ namespace neuron::ecs {
     };
 
     struct RenderOnCameraLayer {
-        flecs::entity camera_layer; // camera layers are represented as entities which are related to an entity with a camera component
+        flecs::entity cameraLayer; // camera layers are represented as entities which are related to an entity with a camera component
     };
 
     /**
-     * 
+     * A camera layer represents an output from a camera (any camera can produce multiple outputs with different post-processing lines, but each camera represents a projection from a single view)
      */
     struct CameraLayer {
+        asset::AssetHandle<asset::RenderTarget> renderTarget;
+        asset::AssetHandle<asset::PostProcessingPipeline> postProcessingPipeline;
+    };
 
+    struct Camera {
+        glm::mat4 projectionMatrix;
+    };
+
+    struct OrthographicCameraProjection { // requires Camera, sets Camera::projectionMatrix
+        glm::vec2 minBounds;
+        glm::vec2 maxBounds;
+        float zNear;
+        float zFar;
+    };
+
+    struct PerspectiveCameraProjection { // requires Camera, sets Camera::projectionMatrix
+        float yFov;
+        float aspectRatio;
+        float zNear;
+        float zFar;
     };
 
     namespace tags {

@@ -21,6 +21,15 @@ add_executable(glengine src/main.cpp
         src/neuron/scene/scene.cpp
         src/neuron/scene/scene.hpp
         src/neuron/ecs/components.hpp
+        src/neuron/asset/asset.cpp
+        src/neuron/asset/asset.hpp
+        src/neuron/asset/render_target.cpp
+        src/neuron/asset/render_target.hpp
+        src/neuron/asset/post_processing_pipeline.cpp
+        src/neuron/asset/post_processing_pipeline.hpp
+        src/neuron/asset/framebuffer.cpp
+        src/neuron/asset/framebuffer.hpp
+        src/neuron/locking_ptr_ref.hpp
 )
 target_include_directories(glengine PUBLIC src/)
 target_link_libraries(glengine PUBLIC glfw glm::glm glad::glad assimp::assimp imgui::imgui $<IF:$<TARGET_EXISTS:flecs::flecs>,flecs::flecs,flecs::flecs_static>)
