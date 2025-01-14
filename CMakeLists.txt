@@ -30,7 +30,12 @@ add_executable(glengine src/main.cpp
         src/neuron/asset/framebuffer.cpp
         src/neuron/asset/framebuffer.hpp
         src/neuron/locking_ptr_ref.hpp
+        src/neuron/asset/shader.cpp
+        src/neuron/asset/shader.hpp
+        src/neuron/asset/mesh.cpp
+        src/neuron/asset/mesh.hpp
 )
 target_include_directories(glengine PUBLIC src/)
 target_link_libraries(glengine PUBLIC glfw glm::glm glad::glad assimp::assimp imgui::imgui $<IF:$<TARGET_EXISTS:flecs::flecs>,flecs::flecs,flecs::flecs_static>)
 target_compile_definitions(glengine PUBLIC -DGLM_ENABLE_EXPERIMENTAL)
+

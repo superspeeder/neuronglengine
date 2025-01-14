@@ -14,6 +14,14 @@
 #include <imgui_impl_glfw.h>
 #include <imgui_impl_opengl3.h>
 
+#include "neuron/asset/asset.hpp"
+#include "neuron/asset/framebuffer.hpp"
+#include "neuron/asset/mesh.hpp"
+#include "neuron/asset/post_processing_pipeline.hpp"
+#include "neuron/asset/shader.hpp"
+
+using neuron::asset::assetTable;
+
 template <typename T>
 using vfn = T (*)();
 
@@ -42,17 +50,16 @@ int main() {
 
     const auto window = std::make_shared<neuron::Window>("Wheeeeee!", glm::uvec2{800, 600});
 
-    std::shared_ptr<neuron::Shader> shader;
+    neuron::asset::AssetHandle<neuron::asset::Shader> shader;
 
     {
         const auto vsh = neuron::ShaderModule::load("res/vert.glsl", neuron::ShaderModule::Type::Vertex);
         const auto fsh = neuron::ShaderModule::load("res/frag.glsl", neuron::ShaderModule::Type::Fragment);
-        shader = std::make_shared<neuron::Shader>(std::vector{vsh, fsh});
+
+        shader = assetTable<neuron::asset::Shader>()->initAsset(neuron::asset::Shader::create(std::vector{vsh, fsh}));
     }
 
-
-    auto meshes = neuron::Mesh::loadWithAssimp("res/test.glb");
-    auto mesh = meshes[0];
+    auto mesh_handle = assetTable<neuron::asset::Mesh>()->initAsset(neuron::asset::Mesh::load("res/test.glb"));
 
     ImGui::CreateContext();
     ImGui_ImplGlfw_InitForOpenGL(window->handle(), true);
@@ -136,18 +143,23 @@ int main() {
         glm::mat4 model           = glm::scale(glm::translate(glm::identity<glm::mat4>(), modelPosition), modelScale);
         glm::mat3 modelNormMatrix = glm::mat3(glm::transpose(glm::inverse(model)));
 
-        shader->use();
-        shader->uniformMatrix4f("uViewProjection", projection * view);
-        shader->uniformMatrix4f("uModel", model);
-        shader->uniformMatrix3f("uModelNormal", modelNormMatrix);
+        {
+            auto sh = shader.getFromGlobal();
+            auto mesh = mesh_handle.getFromGlobal();
 
-        shader->uniform3f("uSunDirection", sunDirection);
-        shader->uniform3f("uSunLight", sunColor);
-        shader->uniform3f("uAmbientLight", ambientColor);
-        shader->uniform3f("uEyePosition", eyePosition);
-        shader->uniform1f("uSpecularStrength", specularStrength);
+            sh->object()->use();
+            sh->object()->uniformMatrix4f("uViewProjection", projection * view);
+            sh->object()->uniformMatrix4f("uModel", model);
+            sh->object()->uniformMatrix3f("uModelNormal", modelNormMatrix);
 
-        mesh->draw();
+            sh->object()->uniform3f("uSunDirection", sunDirection);
+            sh->object()->uniform3f("uSunLight", sunColor);
+            sh->object()->uniform3f("uAmbientLight", ambientColor);
+            sh->object()->uniform3f("uEyePosition", eyePosition);
+            sh->object()->uniform1f("uSpecularStrength", specularStrength);
+
+            mesh->object()->draw();
+        }
 
 
         ImGui_ImplGlfw_NewFrame();
@@ -179,23 +191,15 @@ int main() {
             if (ImGui::Button("Reload Shaders")) {
                 const auto vsh = neuron::ShaderModule::load("res/vert.glsl", neuron::ShaderModule::Type::Vertex);
                 const auto fsh = neuron::ShaderModule::load("res/frag.glsl", neuron::ShaderModule::Type::Fragment);
-                shader = std::make_shared<neuron::Shader>(std::vector{vsh, fsh});
+                assetTable<neuron::asset::Shader>()->replaceAsset(shader, neuron::asset::Shader::create(std::vector{vsh, fsh}));
             }
 
             ImGui::Spacing();
             ImGui::InputText("Model Filename", modelPath, 260);
 
             if (ImGui::Button("Reload Model")) {
-                std::string mp = modelPath;
-
-                if (std::filesystem::exists(mp)) {
-                    if (mp.ends_with(".nmesh")) {
-                        meshes.clear();
-                        mesh = neuron::Mesh::loadFromNMeshFile(modelPath);
-                    } else {
-                        meshes = neuron::Mesh::loadWithAssimp(modelPath);
-                        mesh = meshes[0];
-                    }
+                if (std::filesystem::exists(modelPath)) {
+                    assetTable<neuron::asset::Mesh>()->replaceAsset(mesh_handle, neuron::asset::Mesh::load(modelPath));
                 }
             }
         }
@@ -212,5 +216,8 @@ int main() {
         deltaTime = thisFrame - lastFrame;
     }
 
+    neuron::asset::cleanupAssetTables();
+
+    std::cout << "Test" << std::endl;
     return 0;
 }

@@ -2,15 +2,17 @@
 
 #include <memory>
 #include <shared_mutex>
+#include <unordered_map>
 
 namespace neuron {
     template <typename T, typename R>
-    concept any_reference = std::same_as<T, R &> || std::same_as<T, const R &>;
+    concept any_reference = std::same_as<std::remove_cvref_t<T>, std::remove_cvref_t<R>>;
 
     template <typename T, typename R, typename I>
     concept indexable_for = requires(const T &t, I index) {
-        { t[index] } -> any_reference<R>;
+        { t.at(index) } -> any_reference<R>;
     };
+
 
     template <typename T>
     class locking_ptr_ref {
@@ -22,7 +24,7 @@ namespace neuron {
         template <typename I, indexable_for<std::unique_ptr<T>, I> C>
         inline static locking_ptr_ref from_indexing(std::shared_mutex &mutex, const C &container, I index) {
             mutex.lock_shared();
-            return locking_ptr_ref(mutex, container[index]);
+            return locking_ptr_ref(mutex, container.at(index));
         }
 
         locking_ptr_ref(std::shared_mutex &mutex, const std::unique_ptr<T> &ptr) : mutex(mutex), ptr(ptr) {}

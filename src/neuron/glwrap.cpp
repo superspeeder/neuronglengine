@@ -1,6 +1,7 @@
 #include "glwrap.hpp"
 
 #include <fstream>
+#include <iostream>
 
 namespace neuron {
     Buffer::Buffer(const std::size_t size, const void *data, const Usage usage) : m_Buffer(~0U), m_CurrentUsage(usage), m_CurrentSize(size) {
@@ -103,6 +104,10 @@ namespace neuron {
         file.close();
 
         return std::make_shared<ShaderModule>(source, type);
+    }
+
+    Shader::~Shader() {
+        glDeleteProgram(m_Program);
     }
 
     int Shader::getUniformLocation(const std::string_view &name) const {

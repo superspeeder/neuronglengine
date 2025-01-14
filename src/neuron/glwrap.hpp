@@ -222,6 +222,8 @@ namespace neuron {
             }
         }
 
+        ~Shader();
+
         int getUniformLocation(const std::string_view &name) const;
 
         void uniform1f(int location, float x) const;
@@ -531,7 +533,7 @@ namespace neuron {
         void bind() const;
         static void unbind();
 
-        [[nodiscart]] inline unsigned int handle() const { return m_Renderbuffer; };
+        [[nodiscard]] inline unsigned int handle() const { return m_Renderbuffer; };
 
     private:
         unsigned int m_Renderbuffer;
@@ -558,7 +560,7 @@ namespace neuron {
         void attach_stencil_texture(const std::shared_ptr<Texture>& texture, int level = 0) const;
         void attach_depth_stencil_texture(const std::shared_ptr<Texture>& texture, int level = 0) const;
 
-        [[nodiscart]] inline unsigned int handle() const { return m_Framebuffer; };
+        [[nodiscard]] inline unsigned int handle() const { return m_Framebuffer; };
     private:
         unsigned int m_Framebuffer;
     };
